@@ -1,0 +1,147 @@
+import java.io.*;
+import java.util.*;
+import java.util.regex.*;
+
+public class FindWords{
+static Vector<String> QList = new Vector<String>();
+static Vector<String> SList = new Vector<String>();
+static Hashtable<String, Integer> QCounter = new Hashtable<String, Integer>();
+static Hashtable<String, Integer> SCounter = new Hashtable<String, Integer>();
+static Pattern SPattern = Pattern.compile("(.*?[.?!])", Pattern.CASE_INSENSITIVE);
+static Pattern splitPattern = Pattern.compile("[,]");
+static Vector<String> QuestionPhrases = new Vector<String>();
+
+
+	public static void main(String args[]){
+		boolean continueFlag=true;
+		QuestionPhrases.add("is");
+		QuestionPhrases.add("are");
+		QuestionPhrases.add("does");
+		QuestionPhrases.add("how");
+		QuestionPhrases.add("was");
+		QuestionPhrases.add("what");
+		QuestionPhrases.add("why");
+		QuestionPhrases.add("when");
+
+		try (BufferedReader br = new BufferedReader(new FileReader("abc.txt"))) {
+			String line;
+			while ((line = br.readLine()) != null && continueFlag) {
+					if(! line.equals("END")){
+					//System.out.println(line);
+					int index=0;
+					Matcher matcher = SPattern.matcher(line);
+					//System.out.println("1");
+
+					while(matcher.find()){
+						//System.out.println("2");
+						String match = matcher.group();
+						match=match.toLowerCase();
+						String lineWords[]=match.split(" ");
+
+						if (match.endsWith("?")){
+							match=match.trim();
+							match=match.substring(0,match.length()-1);
+							match=match.replaceAll(",", "");
+							QList.add(match);
+							System.out.println("\tQ|" + match);
+						}else{
+							System.out.println("\tS|" + match);
+							match=match.trim();
+							match=match.substring(0,match.length()-1);
+							match=match.replaceAll(",", "");
+							SList.add(match);
+						}
+						index=matcher.end();
+					}
+					//Either single sentence on the line that do not end with punctuation or last sentence of multi sentences on same line.
+					if(index!=line.length()){
+						line=line.toLowerCase();
+						String match = line.substring(index);
+						//System.out.println("3:"+match);
+						match=match.trim();
+						match=match.replaceAll(",", "");
+
+						String words[]=match.split(" ");
+						//System.out.println("4:"+words[0]);
+
+						if(QuestionPhrases.indexOf(words[0]) > 0){
+							System.out.println("\tQ|" + match);
+							QList.add(match);
+						} else{
+							//match=match.substring(0,match.length()-1);
+							System.out.println("\tS|" + match);
+							SList.add(match);
+						}
+
+					}
+				}else{
+					continueFlag=false;
+				}
+			   // process the line.
+			}
+		processNLP(QList,QCounter);
+		processNLP(SList,SCounter);
+		printNLPResults();
+		}catch(Exception e){
+			System.out.println(e.getMessage());
+		}
+	}
+	private static void printNLPResults(){
+		System.out.println("\n\nFor Questions\n-----------------");
+		QCounter.forEach((k, v) -> System.out.println(k + "," + v));
+		System.out.println("\n\nFor Sentences\n-----------------");
+		SCounter.forEach((k, v) -> System.out.println(k + "," + v));
+
+	}
+	private static void processNLP(Vector<String> inputList, Hashtable<String, Integer> inputCounter){
+		int maxWordsCounter=1;
+
+		for(int wl=1; wl <=maxWordsCounter; wl++){
+			System.out.println("Word Length: " + wl);
+			int listLength = inputList.size();
+			for (int i=0; i<listLength; i++){
+				String line = inputList.elementAt(i);
+				System.out.println("Question or Sentence: " + line);
+
+				String lineWords[]=line.split(" ");
+				int numOfWords=lineWords.length;
+				if( (wl==1) && (numOfWords > maxWordsCounter)){
+					maxWordsCounter=numOfWords;
+				}
+				Hashtable<String, Integer> phrasesVisited = new Hashtable<String, Integer>();
+
+				for (int j=0; j+wl <= numOfWords; j++)
+				{
+					String phrase= String.join(" ", Arrays.copyOfRange(lineWords,j,j+wl));
+					System.out.println("\n\t phrase:" + phrase+":");
+					if(! phrasesVisited.containsKey(phrase)){
+					System.out.println("\n\t phrase:" + phrase+": Not Visited");
+
+						phrasesVisited.put(phrase,1);
+						if (! inputCounter.containsKey(phrase)){
+							inputCounter.put(phrase,0);
+						}
+						int phraseCounter = inputCounter.get(phrase);
+						System.out.println("\t count:"+ phraseCounter);
+
+						String phraseRegex = "(.*?" +phrase+")";
+						Pattern phrasePattern=Pattern.compile(phraseRegex);
+						Matcher m = phrasePattern.matcher(line);
+
+						while(m.find()){
+							phraseCounter++;
+
+						}
+						System.out.println("\t updated count:"+phraseCounter);
+						inputCounter.put(phrase, phraseCounter);
+					}else{
+						System.out.println("\n\t phrase:" + phrase+": is Visited");
+					}
+				}
+			}
+
+
+		}
+
+	}
+}
